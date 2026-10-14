@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07070f">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/style.css">
+  <title>Meteorsturm · Browser-Arcade</title>
+  <meta name="description" content="Meteorsturm: Vektor-Arcade im Browser. Steuere dein Schiff mit Trägheit durch ein Brockenfeld, zerlege Meteore und weiche UFOs aus. Mit Tastatur oder Bildschirmtasten.">
+</head>
+<body style="--ak:var(--pink)">
+  <div class="raster" aria-hidden="true"></div>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <header class="kopf"><nav class="container nav" aria-label="Hauptnavigation">
+    <a class="marke" href="./"><span class="logo">▶</span>GAMES</a>
+    <div class="nav-links"><a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a></div>
+  </nav></header>
+  <main id="main" class="container">
+    <div class="spiel-kopf"><div><h1>METEORSTURM</h1><p class="unterzeile">Drehen, Schub geben, Brocken zerlegen. Und den UFOs ausweichen.</p></div></div>
+    <div class="hud">
+      <div class="hud-feld"><div class="label">Punkte</div><div class="wert" id="hud-punkte">0</div></div>
+      <div class="hud-feld"><div class="label">Leben</div><div class="wert" id="hud-leben">3</div></div>
+      <div class="hud-feld"><div class="label">Welle</div><div class="wert" id="hud-welle">1</div></div>
+      <div class="hud-feld"><div class="label">Rekord</div><div class="wert" id="hud-rekord">0</div></div>
+    </div>
+    <div class="buehne">
+      <!-- Logisch 640x480 Pixel (4:3 wie ein alter Automatenmonitor). CSS skaliert nur. -->
+      <canvas id="leinwand" width="640" height="480" role="img"
+              aria-label="Meteorsturm-Spielfeld: schwarzer Weltraum mit leuchtenden Linien, in der Mitte das Schiff, ringsum treibende Meteorbrocken"
+              style="max-width:820px;margin-inline:auto;image-rendering:auto"></canvas>
+    </div>
+    <p class="steuerung"><span class="nur-tastatur">Drehen mit <kbd>←</kbd> <kbd>→</kbd> oder <kbd>A</kbd> <kbd>D</kbd> · Schub <kbd>↑</kbd>/<kbd>W</kbd> · Feuer <kbd>Leertaste</kbd> (halten = Dauerfeuer) · Hyperraum <kbd>↓</kbd>/<kbd>S</kbd> · <kbd>P</kbd> Pause.</span><span class="nur-touch">Links die Dreh-Tasten, rechts Hyperraum, Schub und Feuer. Mehrere Tasten gleichzeitig halten geht. Feuer halten = Dauerfeuer. Tipp: Im Querformat mit <strong>Spielmodus</strong> spielen.</span></p>
+    <section style="max-width:420px;margin-top:36px"><h2 style="font-family:var(--pixel);font-weight:400;font-size:.85rem">Lokale Top 3</h2><div id="topliste"></div>
+      <button class="knopf" id="reset" style="margin-top:10px">Spielstand zurücksetzen</button></section>
+    <section class="lernbox"><details open><summary>Anleitung &amp; Regeln</summary>
+      <p><strong>Ziel:</strong> Zerstöre alle Meteorbrocken einer Welle, ohne getroffen zu werden. Danach kommt die nächste, größere Welle.</p>
+      <ul>
+        <li>Große Brocken zerfallen in zwei mittlere, mittlere in zwei kleine, kleine lösen sich auf. Punkte: groß 20, mittel 50, klein 100.</li>
+        <li>Dein Schiff hat Trägheit: Schub beschleunigt in Blickrichtung, ohne Schub gleitest du weiter und wirst nur langsam gebremst.</li>
+        <li>Wer über den Rand fliegt, kommt auf der Gegenseite wieder herein. Das gilt für Schiff, Schüsse und Brocken.</li>
+        <li>UFOs tauchen zwischendurch auf. Das große schießt wild um sich (200 Punkte), das kleine zielt und wird mit deinem Punktestand immer treffsicherer (1.000 Punkte). Ihre Schüsse zerlegen auch Brocken.</li>
+        <li>Hyperraum bringt dich an eine zufällige Stelle. Das rettet oft, kann aber auch mitten in einem Brocken enden.</li>
+        <li>Du startest mit 3 Leben, alle 10.000 Punkte gibt es ein Extraleben. Nach einem Treffer erscheint das Schiff in der Mitte, sobald dort Platz ist, und ist kurz unverwundbar (es blinkt).</li>
+      </ul>
+    </details></section>
+
+    <section class="lernbox"><details><summary>Wie funktioniert der Code?</summary>
+      <p><strong>Trägheit mit zwei Zahlen.</strong> Das Schiff hat eine Geschwindigkeit <code>vx</code>, <code>vy</code>. Schub addiert pro Schritt <code>cos(winkel) · SCHUB · dt</code> bzw. <code>sin(…)</code>, also einen kleinen Vektor in Blickrichtung. Die Position ändert sich nur über die Geschwindigkeit. Darum dreht sich das Schiff, fliegt aber erst einmal in die alte Richtung weiter. Die Reibung ist exponentiell (<code>v · e<sup>−k·dt</sup></code>), damit sie bei jeder Schrittweite gleich stark wirkt.</p>
+      <p><strong>Rand-Umlauf.</strong> <code>umlauf(wert, max)</code> faltet jede Koordinate mit Modulo zurück ins Feld, auch negative Werte. Für Treffer reicht das nicht: Ein Brocken bei x = 5 und ein Schuss bei x = 635 liegen eigentlich nur 10 Pixel auseinander. <code>umlaufDelta</code> nimmt deshalb immer den kürzeren Weg, rechts herum oder links herum. Gezeichnet wird ein Objekt am Rand gleich mehrfach (<code>ueberallZeichnen</code>), damit es halb links und halb rechts zu sehen ist.</p>
+      <p><strong>Kreise statt Polygone.</strong> Für Treffer zählt jeder Brocken als Kreis. Zwei Kreise berühren sich, wenn <code>dx² + dy² ≤ (r1 + r2)²</code>. Die Wurzel sparen wir uns, Quadrate vergleichen reicht. Die Radien sind etwas kleiner als die gezeichnete Form, damit sich Treffer fair anfühlen.</p>
+      <p><strong>Jeder Brocken ist ein Unikat.</strong> <code>neuerBrocken</code> erzeugt ein Vieleck mit 9 bis 12 Ecken und speichert pro Ecke einen zufälligen Abstand zur Mitte. Gezeichnet wird das Vieleck reihum mit <code>lineTo</code>, gedreht um <code>drehung</code>. Beim Zerfall entstehen zwei neue Brocken der nächstkleineren Größe an derselben Stelle, mit neuen, etwas schnelleren Richtungen.</p>
+      <p><strong>Ein UFO, das zielen lernt.</strong> Das kleine UFO berechnet mit <code>Math.atan2(dy, dx)</code> den Winkel zum Schiff (über den Rand hinweg, siehe <code>umlaufDelta</code>) und addiert eine Streuung. Die Streuung schrumpft mit deinem Punktestand. So wird es mit der Zeit gefährlicher, ohne dass man eine Schwierigkeitsstufe wählen muss.</p>
+      <p><strong>Vektor-Look.</strong> Alles besteht aus Linien mit <code>shadowBlur</code> als Leuchten. Statt das Bild in jedem Frame komplett zu löschen, wird es nur halbtransparent mit Schwarz übermalt. Was sich bewegt, zieht dadurch eine kurze Leuchtspur hinter sich her, wie der Nachschein auf einer alten Bildröhre. Bei „Bewegung reduzieren“ wird stattdessen komplett gelöscht.</p>
+      <p><strong>Logik und Zeichnen getrennt.</strong> Alles Rechnerische steht in <code>logik.js</code> und bekommt den Zufall als Funktion übergeben (<code>zufall()</code>). In Tests kann man so einen festen Zufall einsetzen und genau nachprüfen, was passiert.</p>
+    </details></section>
+  </main>
+  <footer class="fuss"><div class="container fuss-in"><span>Browser-Arcade · Open Source</span><nav aria-label="Rechtliches"><a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a></nav></div></footer>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
