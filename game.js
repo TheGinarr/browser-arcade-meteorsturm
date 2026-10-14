@@ -21,24 +21,50 @@
    ============================================================ */
 
 import { topliste, spielZuruecksetzen } from "./assets/storage.js";
-import { bewegungReduziert, gameOverDialog, toplisteAnzeigen, zahlHochzaehlen } from "./assets/ui.js";
+import {
+  bewegungReduziert,
+  gameOverDialog,
+  toplisteAnzeigen,
+  zahlHochzaehlen,
+} from "./assets/ui.js";
 import { spielSeite, text, TASTE } from "./assets/mobil.js";
 import {
-  BREITE, HOEHE, SCHIFF_RADIUS, MAX_SCHUESSE, BROCKEN_RADIUS, UFO_PUNKTE, UFO_RADIUS,
-  umlauf, kreiseTreffen, neuesSchiff, schiffSchritt, schussVomSchiff, schussSchritt,
-  brockenSchritt, brockenTeilen, punkteFuer, wellenBrocken, mitteFrei,
-  ufoPause, neuesUfo, ufoSchritt, ufoZielWinkel, ufoSchuss, bonusLeben, hyperraumZiel,
+  BREITE,
+  HOEHE,
+  SCHIFF_RADIUS,
+  MAX_SCHUESSE,
+  BROCKEN_RADIUS,
+  UFO_PUNKTE,
+  UFO_RADIUS,
+  umlauf,
+  kreiseTreffen,
+  neuesSchiff,
+  schiffSchritt,
+  schussVomSchiff,
+  schussSchritt,
+  brockenSchritt,
+  brockenTeilen,
+  punkteFuer,
+  wellenBrocken,
+  mitteFrei,
+  ufoPause,
+  neuesUfo,
+  ufoSchritt,
+  ufoZielWinkel,
+  ufoSchuss,
+  bonusLeben,
+  hyperraumZiel,
 } from "./logik.js";
 
 /* ---------- Konstanten ---------- */
 const SPIEL = "meteorsturm";
-const SCHRITT = 1 / 120;              // Physik-Zeitschritt (fest)
+const SCHRITT = 1 / 120; // Physik-Zeitschritt (fest)
 const MAX_FRAME_ABSTAND_MS = 250;
 const START_LEBEN = 3;
-const FEUER_PAUSE = 0.22;             // s zwischen zwei Schüssen bei gehaltener Taste
-const HYPER_PAUSE = 1.0;              // s Sperre nach einem Hyperraum-Sprung
-const WELLEN_PAUSE = 2.0;             // s zwischen zwei Wellen
-const NEU_PAUSE = 1.6;                // s nach einem Treffer, bevor das Schiff zurückkommt
+const FEUER_PAUSE = 0.22; // s zwischen zwei Schüssen bei gehaltener Taste
+const HYPER_PAUSE = 1.0; // s Sperre nach einem Hyperraum-Sprung
+const WELLEN_PAUSE = 2.0; // s zwischen zwei Wellen
+const NEU_PAUSE = 1.6; // s nach einem Treffer, bevor das Schiff zurückkommt
 const SPERRE_NACH_DIALOG_MS = 700;
 
 const TASTEN = {
@@ -81,21 +107,25 @@ const farben = {
 };
 
 /* ---------- Zustand ---------- */
-let phase;            // "bereit" | "laeuft" | "pause" | "vorbei"
-let schiff;           // Objekt aus logik.js oder null
+let phase; // "bereit" | "laeuft" | "pause" | "vorbei"
+let schiff; // Objekt aus logik.js oder null
 let brocken, schuesse, ufoSchuesse, partikel;
 let ufo, ufoTimer;
 let punkte, leben, welle;
-let wellenTimer;      // > 0: Pause bis zur nächsten Welle
-let neuTimer;         // > 0: Schiff ist zerstört und kommt nach Ablauf zurück
-let feuerTimer = 0, hyperTimer = 0;
+let wellenTimer; // > 0: Pause bis zur nächsten Welle
+let neuTimer; // > 0: Schiff ist zerstört und kommt nach Ablauf zurück
+let feuerTimer = 0,
+  hyperTimer = 0;
 let rekordGespeichert = 0;
-let banner = "", bannerBis = 0;
-let akkumulator = 0, letzteZeit = 0, spielzeit = 0;
+let banner = "",
+  bannerBis = 0;
+let akkumulator = 0,
+  letzteZeit = 0,
+  spielzeit = 0;
 let dialogGezeigt = false;
 let ruhigerModus = bewegungReduziert();
 const taste = { links: false, rechts: false, schub: false, feuer: false, hyper: false };
-let feuerGedrueckt = false;   // für "einmal tippen = ein Schuss"
+let feuerGedrueckt = false; // für "einmal tippen = ein Schuss"
 
 /* ============================================================
    HUD & Topliste
@@ -158,10 +188,14 @@ function explosion(x, y, menge, farbe = farben.linie) {
     const w = Math.random() * Math.PI * 2;
     const v = 40 + Math.random() * 160;
     partikel.push({
-      x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v,
+      x,
+      y,
+      vx: Math.cos(w) * v,
+      vy: Math.sin(w) * v,
       rest: 0.4 + Math.random() * 0.6,
-      laenge: Math.random() < 0.35 ? 4 + Math.random() * 8 : 0,   // manche sind kleine Linien-Splitter
-      winkel: Math.random() * Math.PI, farbe,
+      laenge: Math.random() < 0.35 ? 4 + Math.random() * 8 : 0, // manche sind kleine Linien-Splitter
+      winkel: Math.random() * Math.PI,
+      farbe,
     });
   }
 }
@@ -180,8 +214,17 @@ function schiffZerstoeren() {
   // Wrack: die Linien des Schiffs fliegen auseinander
   for (let i = 0; i < 5; i++) {
     const w = Math.random() * Math.PI * 2;
-    partikel.push({ x: schiff.x, y: schiff.y, vx: Math.cos(w) * 60 + schiff.vx * 0.3, vy: Math.sin(w) * 60 + schiff.vy * 0.3,
-      rest: 1.4, laenge: 12, winkel: Math.random() * Math.PI, dreh: (Math.random() - 0.5) * 6, farbe: farben.linie });
+    partikel.push({
+      x: schiff.x,
+      y: schiff.y,
+      vx: Math.cos(w) * 60 + schiff.vx * 0.3,
+      vy: Math.sin(w) * 60 + schiff.vy * 0.3,
+      rest: 1.4,
+      laenge: 12,
+      winkel: Math.random() * Math.PI,
+      dreh: (Math.random() - 0.5) * 6,
+      farbe: farben.linie,
+    });
   }
   schiff = null;
   leben -= 1;
@@ -255,7 +298,11 @@ function schritt(dt) {
   for (let i = schuesse.length - 1; i >= 0; i--) {
     const s = schuesse[i];
     const bi = brocken.findIndex((b) => kreiseTreffen(s, 2, b, BROCKEN_RADIUS[b.groesse] * 0.92));
-    if (bi >= 0) { schuesse.splice(i, 1); brockenTreffen(bi); continue; }
+    if (bi >= 0) {
+      schuesse.splice(i, 1);
+      brockenTreffen(bi);
+      continue;
+    }
     if (ufo && kreiseTreffen(s, 2, ufo, UFO_RADIUS[ufo.art])) {
       schuesse.splice(i, 1);
       punkteDazu(UFO_PUNKTE[ufo.art]);
@@ -280,16 +327,23 @@ function schritt(dt) {
   // Schiff getroffen? (Schutzzeit nach dem Erscheinen)
   if (schiff && schiff.schutz <= 0) {
     const r = SCHIFF_RADIUS * 0.85;
-    const bi = brocken.findIndex((b) => kreiseTreffen(schiff, r, b, BROCKEN_RADIUS[b.groesse] * 0.82));
-    if (bi >= 0) { brockenTreffen(bi); schiffZerstoeren(); }
-    else if (ufo && kreiseTreffen(schiff, r, ufo, UFO_RADIUS[ufo.art])) {
+    const bi = brocken.findIndex((b) =>
+      kreiseTreffen(schiff, r, b, BROCKEN_RADIUS[b.groesse] * 0.82),
+    );
+    if (bi >= 0) {
+      brockenTreffen(bi);
+      schiffZerstoeren();
+    } else if (ufo && kreiseTreffen(schiff, r, ufo, UFO_RADIUS[ufo.art])) {
       punkteDazu(UFO_PUNKTE[ufo.art]);
       explosion(ufo.x, ufo.y, 20, farben.ufo);
       ufo = null;
       schiffZerstoeren();
     } else {
       const si = ufoSchuesse.findIndex((s) => kreiseTreffen(schiff, r, s, 2));
-      if (si >= 0) { ufoSchuesse.splice(si, 1); schiffZerstoeren(); }
+      if (si >= 0) {
+        ufoSchuesse.splice(si, 1);
+        schiffZerstoeren();
+      }
     }
   }
 
@@ -305,7 +359,8 @@ function partikelBewegen(dt) {
   for (const p of partikel) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    p.vx *= 0.985; p.vy *= 0.985;
+    p.vx *= 0.985;
+    p.vy *= 0.985;
     if (p.dreh) p.winkel += p.dreh * dt;
     p.rest -= dt;
   }
@@ -326,14 +381,22 @@ function dialogAnzeigen() {
   });
   // Kurz sperren, damit Dauerfeuer den Dialog nicht sofort wegdrückt
   const bis = performance.now() + SPERRE_NACH_DIALOG_MS;
-  const sperren = (e) => { if (performance.now() < bis) { e.preventDefault(); e.stopPropagation(); } };
+  const sperren = (e) => {
+    if (performance.now() < bis) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
   document.addEventListener("keydown", sperren, true);
   dialog.style.pointerEvents = "none";
   setTimeout(() => {
     dialog.style.pointerEvents = "";
     document.removeEventListener("keydown", sperren, true);
   }, SPERRE_NACH_DIALOG_MS);
-  dialog.addEventListener("close", () => { toplisteAktualisieren(); hudAktualisieren(); });
+  dialog.addEventListener("close", () => {
+    toplisteAktualisieren();
+    hudAktualisieren();
+  });
 }
 
 /* ============================================================
@@ -360,7 +423,10 @@ document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (document.getElementById("spiel-dialog")) return;
   const k = e.key.toLowerCase();
-  if (k === "p") { pauseUmschalten(); return; }
+  if (k === "p") {
+    pauseUmschalten();
+    return;
+  }
   const istStart = k === "enter" || k === " ";
   const art = Object.keys(TASTEN).find((n) => TASTEN[n].has(k));
   if (!art && !istStart) return;
@@ -371,7 +437,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (art) {
-    if (art === "feuer" && !taste.feuer) feuerTimer = 0;   // neuer Druck: sofort schießen
+    if (art === "feuer" && !taste.feuer) feuerTimer = 0; // neuer Druck: sofort schießen
     taste[art] = true;
   }
 });
@@ -393,7 +459,9 @@ function eingabeVergessen() {
   for (const k of Object.keys(taste)) taste[k] = false;
   if (phase === "laeuft") phase = "pause";
 }
-document.addEventListener("visibilitychange", () => { if (document.hidden) eingabeVergessen(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) eingabeVergessen();
+});
 window.addEventListener("blur", eingabeVergessen);
 
 resetKnopf.addEventListener("click", () => {
@@ -410,9 +478,12 @@ resetKnopf.addEventListener("click", () => {
 
 /** Zeichnet eine Form an allen Stellen, an denen sie über den Rand ragt. */
 function ueberallZeichnen(x, y, r, zeichne) {
-  const xs = [x], ys = [y];
-  if (x < r) xs.push(x + BREITE); else if (x > BREITE - r) xs.push(x - BREITE);
-  if (y < r) ys.push(y + HOEHE); else if (y > HOEHE - r) ys.push(y - HOEHE);
+  const xs = [x],
+    ys = [y];
+  if (x < r) xs.push(x + BREITE);
+  else if (x > BREITE - r) xs.push(x - BREITE);
+  if (y < r) ys.push(y + HOEHE);
+  else if (y > HOEHE - r) ys.push(y - HOEHE);
   for (const px of xs) for (const py of ys) zeichne(px, py);
 }
 
@@ -467,7 +538,8 @@ function zeichneBrocken(b) {
       const w = (i / b.form.length) * Math.PI * 2;
       const px = Math.cos(w) * r * faktor;
       const py = Math.sin(w) * r * faktor;
-      if (i === 0) z.moveTo(px, py); else z.lineTo(px, py);
+      if (i === 0) z.moveTo(px, py);
+      else z.lineTo(px, py);
     });
     z.closePath();
     z.stroke();
@@ -514,8 +586,14 @@ function zeichnePartikel() {
     if (p.laenge) {
       linienStil(p.farbe, 1.3);
       z.beginPath();
-      z.moveTo(p.x - Math.cos(p.winkel) * p.laenge / 2, p.y - Math.sin(p.winkel) * p.laenge / 2);
-      z.lineTo(p.x + Math.cos(p.winkel) * p.laenge / 2, p.y + Math.sin(p.winkel) * p.laenge / 2);
+      z.moveTo(
+        p.x - (Math.cos(p.winkel) * p.laenge) / 2,
+        p.y - (Math.sin(p.winkel) * p.laenge) / 2,
+      );
+      z.lineTo(
+        p.x + (Math.cos(p.winkel) * p.laenge) / 2,
+        p.y + (Math.sin(p.winkel) * p.laenge) / 2,
+      );
       z.stroke();
     } else {
       zeichnePunkt(p.x, p.y, p.farbe, 1.2);
@@ -533,7 +611,13 @@ function zeichneLebenImFeld() {
     z.scale(0.6, 0.6);
     linienStil(farben.linie, 2);
     z.beginPath();
-    z.moveTo(15, 0); z.lineTo(-9, -10); z.lineTo(-4, -4); z.lineTo(-7, 0); z.lineTo(-4, 4); z.lineTo(-9, 10); z.closePath();
+    z.moveTo(15, 0);
+    z.lineTo(-9, -10);
+    z.lineTo(-4, -4);
+    z.lineTo(-7, 0);
+    z.lineTo(-4, 4);
+    z.lineTo(-9, 10);
+    z.closePath();
     z.stroke();
     z.restore();
   }
@@ -599,8 +683,14 @@ function zeichneAlles(jetzt) {
   }
 
   if (phase === "bereit") {
-    zeichneText(text("TASTE DRÜCKEN", "ZUM START TIPPEN"),
-      text("Leertaste startet · ← → drehen · ↑ Schub · ↓ Hyperraum", "Links drehen · rechts Schub, Feuer, Hyperraum"), jetzt);
+    zeichneText(
+      text("TASTE DRÜCKEN", "ZUM START TIPPEN"),
+      text(
+        "Leertaste startet · ← → drehen · ↑ Schub · ↓ Hyperraum",
+        "Links drehen · rechts Schub, Feuer, Hyperraum",
+      ),
+      jetzt,
+    );
   } else if (phase === "pause") {
     zeichneText("PAUSE", text("P oder Leertaste: weiter", "Antippen: weiter"), jetzt);
   } else if (phase === "vorbei") {
@@ -620,7 +710,8 @@ function einzelbild(jetzt) {
     while (akkumulator >= SCHRITT) {
       akkumulator -= SCHRITT;
       if (phase === "laeuft") schritt(SCHRITT);
-      else {            // nach dem Ende treiben Brocken und Trümmer weiter
+      else {
+        // nach dem Ende treiben Brocken und Trümmer weiter
         spielzeit += SCHRITT;
         for (const b of brocken) brockenSchritt(b, SCHRITT);
       }

@@ -16,15 +16,15 @@ export const BREITE = 640;
 export const HOEHE = 480;
 
 /* ---------- Stellschrauben ---------- */
-export const DREH_TEMPO = 4.4;          // rad/s beim Drehen
-export const SCHUB = 300;               // px/s² Beschleunigung
-export const REIBUNG = 0.55;            // pro Sekunde verliert das Schiff diesen Anteil (exponentiell)
-export const MAX_TEMPO = 360;           // px/s Höchstgeschwindigkeit
-export const SCHIFF_RADIUS = 11;        // Trefferkreis des Schiffs
-export const SCHUSS_TEMPO = 560;        // px/s
-export const SCHUSS_DAUER = 0.85;       // s, dann verpufft ein Schuss
-export const MAX_SCHUESSE = 4;          // gleichzeitig im Flug
-export const BONUS_ALLE = 10000;        // Extraleben alle 10.000 Punkte
+export const DREH_TEMPO = 4.4; // rad/s beim Drehen
+export const SCHUB = 300; // px/s² Beschleunigung
+export const REIBUNG = 0.55; // pro Sekunde verliert das Schiff diesen Anteil (exponentiell)
+export const MAX_TEMPO = 360; // px/s Höchstgeschwindigkeit
+export const SCHIFF_RADIUS = 11; // Trefferkreis des Schiffs
+export const SCHUSS_TEMPO = 560; // px/s
+export const SCHUSS_DAUER = 0.85; // s, dann verpufft ein Schuss
+export const MAX_SCHUESSE = 4; // gleichzeitig im Flug
+export const BONUS_ALLE = 10000; // Extraleben alle 10.000 Punkte
 
 // Brocken: Größe 3 = groß, 2 = mittel, 1 = klein
 export const BROCKEN_RADIUS = { 3: 40, 2: 22, 1: 12 };
@@ -57,7 +57,7 @@ export function kreiseTreffen(a, ra, b, rb) {
   const dx = umlaufDelta(a.x, b.x, BREITE);
   const dy = umlaufDelta(a.y, b.y, HOEHE);
   const r = ra + rb;
-  return dx * dx + dy * dy <= r * r;   // Wurzel sparen: Quadrate vergleichen
+  return dx * dx + dy * dy <= r * r; // Wurzel sparen: Quadrate vergleichen
 }
 
 /* ---------- Schiff ---------- */
@@ -126,7 +126,7 @@ export function neuerBrocken(groesse, x, y, zufall, welle = 1) {
   const ecken = 9 + Math.floor(zufall() * 4);
   const form = [];
   for (let i = 0; i < ecken; i++) {
-    form.push(0.72 + zufall() * 0.4);    // Radius-Faktor je Ecke
+    form.push(0.72 + zufall() * 0.4); // Radius-Faktor je Ecke
   }
   // Kleinere Brocken sind schneller, spätere Wellen auch ein bisschen.
   const grundTempo = { 3: 38, 2: 62, 1: 92 }[groesse] * (1 + Math.min(welle - 1, 8) * 0.06);
@@ -134,7 +134,8 @@ export function neuerBrocken(groesse, x, y, zufall, welle = 1) {
   const richtung = zufall() * Math.PI * 2;
   return {
     groesse,
-    x, y,
+    x,
+    y,
     vx: Math.cos(richtung) * tempo,
     vy: Math.sin(richtung) * tempo,
     drehung: zufall() * Math.PI * 2,
@@ -172,11 +173,18 @@ export function wellenBrocken(welle, schiff, zufall) {
   const liste = [];
   const anzahl = brockenProWelle(welle);
   for (let i = 0; i < anzahl; i++) {
-    let x, y, versuche = 0;
+    let x,
+      y,
+      versuche = 0;
     do {
       // abwechselnd an einem senkrechten bzw. waagerechten Rand
-      if (zufall() < 0.5) { x = zufall() < 0.5 ? 0 : BREITE - 1; y = zufall() * HOEHE; }
-      else { x = zufall() * BREITE; y = zufall() < 0.5 ? 0 : HOEHE - 1; }
+      if (zufall() < 0.5) {
+        x = zufall() < 0.5 ? 0 : BREITE - 1;
+        y = zufall() * HOEHE;
+      } else {
+        x = zufall() * BREITE;
+        y = zufall() < 0.5 ? 0 : HOEHE - 1;
+      }
       versuche++;
     } while (schiff && versuche < 20 && kreiseTreffen({ x, y }, 0, schiff, 160));
     liste.push(neuerBrocken(3, x, y, zufall, welle));
@@ -216,9 +224,9 @@ export function neuesUfo(punkte, welle, zufall) {
     y: 40 + zufall() * (HOEHE - 80),
     vx: vonLinks ? tempo : -tempo,
     vy: 0,
-    kursWechsel: 1 + zufall() * 1.5,   // s bis zum nächsten Höhenwechsel
-    schussPause: 1.2,                  // s bis zum ersten Schuss
-    strecke: 0,                         // zurückgelegte Pixel (UFO verlässt das Feld nach einer Breite)
+    kursWechsel: 1 + zufall() * 1.5, // s bis zum nächsten Höhenwechsel
+    schussPause: 1.2, // s bis zum ersten Schuss
+    strecke: 0, // zurückgelegte Pixel (UFO verlässt das Feld nach einer Breite)
   };
 }
 
@@ -253,7 +261,13 @@ export function ufoZielWinkel(ufo, schiff, punkte, zufall) {
 
 export function ufoSchuss(ufo, winkel) {
   const tempo = 300;
-  return { x: ufo.x, y: ufo.y, vx: Math.cos(winkel) * tempo, vy: Math.sin(winkel) * tempo, rest: 1.4 };
+  return {
+    x: ufo.x,
+    y: ufo.y,
+    vx: Math.cos(winkel) * tempo,
+    vy: Math.sin(winkel) * tempo,
+    rest: 1.4,
+  };
 }
 
 /* ---------- Punkte & Leben ---------- */
